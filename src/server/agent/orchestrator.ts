@@ -208,7 +208,8 @@ export async function* runTurn(input: TurnInput): AsyncGenerator<TurnEvent> {
       let queries = (plan.queries.length ? [...plan.queries] : []).filter((q) => meaningfulTopic(q) !== null);
       if (!queries.length && memory.matches[0]) {
         // A memory question rarely names a searchable subject; the recalled turn does.
-        const recalled = topicalQuery(memory.matches[0].userText).slice(0, 120);
+        // Use the first clause of the recalled question, not the whole essay.
+        const recalled = topicalQuery(memory.matches[0].userText).split(/\s+/).slice(0, 9).join(' ').replace(/[:;,]$/, '');
         if (meaningfulTopic(recalled)) queries = [recalled];
       }
       if (memory.matches.length === 0 && !queries.length && missTopic) queries = [missTopic];
