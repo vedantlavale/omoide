@@ -40,6 +40,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onResetDemo,
+  onLoadDemo,
   providers,
 }: {
   threads: ThreadSummary[];
@@ -47,6 +48,7 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onNew: () => void;
   onResetDemo: () => void;
+  onLoadDemo: () => void;
   providers: Array<{ name: string; configured: boolean; role: string }>;
 }) {
   const groups = groupThreads(threads);
@@ -106,7 +108,12 @@ export function Sidebar({
             Reset demo history
           </button>
         ) : (
-          <span>Memory is date-indexed. Nothing is shared outside this machine.</span>
+          <span>
+            <button className="link-button" onClick={onLoadDemo} type="button">
+              Load demo history
+            </button>{' '}
+            · nothing leaves this machine
+          </span>
         )}
       </div>
     </aside>

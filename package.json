@@ -2,6 +2,7 @@
   "name": "recall",
   "version": "1.0.0",
   "private": true,
+  "engines": { "node": ">=20.9" },
   "type": "module",
   "description": "Recall — a web-search chat agent with long-term, time-indexed memory and a claim ledger.",
   "scripts": {

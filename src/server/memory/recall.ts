@@ -123,12 +123,11 @@ export async function recall(input: RecallInput): Promise<MemoryContext> {
     widened: false,
   };
 
-  // Wait briefly for the previous turn's claim extraction, but never block on it.
+  // A follow-up can arrive before the previous turn's claims are extracted.
+  // Wait briefly, then fall back to re-searching the topic rather than guessing.
   if (input.threadId) {
     const last = await latestAssistantMessage(input.threadId);
-    if (last?.local_date === new Date().toISOString().slice(0, 10)) {
-      await awaitPending(last.id, 2500);
-    }
+    if (last) await awaitPending(last.id, 2500);
   }
 
   // 1. Exact local date.

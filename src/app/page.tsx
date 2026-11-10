@@ -294,6 +294,7 @@ export default function Page() {
         onSelect={openThread}
         onNew={newChat}
         onResetDemo={resetDemo}
+        onLoadDemo={loadDemo}
         providers={config?.providers ?? []}
       />
 
