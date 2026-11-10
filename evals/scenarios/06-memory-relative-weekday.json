@@ -1,0 +1,18 @@
+{
+  "id": "memory-relative-weekday",
+  "category": "memory",
+  "now": "2026-11-10T15:00:00Z",
+  "tz": "Asia/Kolkata",
+  "seedTurns": [
+    {
+      "localDate": "2026-11-09",
+      "message": "We're a 20-person sales team. Shortlist 5 CRMs with pricing."
+    }
+  ],
+  "turns": ["On Monday we shortlisted 5 CRM tools for a 20-person sales team. Has any of them changed pricing or shipped something big since?"],
+  "expect": {
+    "searched": true,
+    "mentionsDate": "9 Nov",
+    "containsAny": ["CRM", "Pipedrive", "HubSpot"]
+  }
+}

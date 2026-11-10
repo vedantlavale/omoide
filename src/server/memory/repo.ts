@@ -14,7 +14,7 @@ export interface MessageRow {
   user_id: string;
   role: 'user' | 'assistant';
   content: string;
-  created_at: string;
+  created_at: string | Date;
   local_date: string;
   tz: string;
   turn_id: string | null;
@@ -27,8 +27,8 @@ export interface ThreadRow {
   id: string;
   title: string | null;
   summary: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at: string | Date;
+  updated_at: string | Date;
   is_demo: boolean;
 }
 
@@ -285,7 +285,9 @@ export function pairTurns(rows: MessageRow[]): TurnPair[] {
         },
     });
   }
-  return pairs.sort((a, b) => a.userMessage.created_at.localeCompare(b.userMessage.created_at));
+  return pairs.sort(
+    (a, b) => new Date(a.userMessage.created_at).getTime() - new Date(b.userMessage.created_at).getTime(),
+  );
 }
 
 // ── claims ────────────────────────────────────────────────────────────────────
@@ -350,5 +352,8 @@ export async function clearDemo(): Promise<number> {
   const db = await getDb();
   const rows = await db.query<{ id: string }>('SELECT id FROM threads WHERE is_demo = true');
   for (const row of rows) await deleteThread(row.id);
+  // Demo searches are invalidated with the demo, so a re-seed reflects the
+  // current pipeline rather than a stale cache.
+  await db.exec('DELETE FROM search_cache');
   return rows.length;
 }

@@ -9,11 +9,43 @@ import { MOCK_DOCS } from '../mock-data';
 import type { RawResult } from '../rank';
 import type { FetchedPage, FetchOptions, ProviderSearchArgs, SearchProvider } from './types';
 
-function score(query: string, doc: (typeof MOCK_DOCS)[number]): number {
+/**
+ * Fixture retrieval. It is deliberately simple, but it mirrors the shape of a
+ * real index: title matches dominate, domain synonyms expand the query
+ * ("CRM" should find HubSpot), and results below half the top score are noise.
+ */
+const SYNONYMS: Record<string, string[]> = {
+  crm: ['crm', 'hubspot', 'salesforce', 'pipedrive', 'zoho', 'close', 'sales'],
+  postgres: ['postgres', 'postgresql', 'neon', 'supabase', 'rds', 'render', 'railway'],
+  hosting: ['hosting', 'postgres', 'neon', 'supabase', 'rds', 'render', 'railway'],
+  nextjs: ['nextjs', 'next', 'vercel', 'react'],
+};
+
+function expanded(query: string): Set<string> {
   const q = new Set(tokenize(query));
-  const text = tokenize(`${doc.title} ${doc.content}`);
+  for (const token of [...q]) {
+    const singular = token.endsWith('s') ? token.slice(0, -1) : token;
+    for (const extra of [...(SYNONYMS[token] ?? []), ...(SYNONYMS[singular] ?? [])]) q.add(extra);
+  }
+  return q;
+}
+
+/** Words that appear on every vendor page and therefore identify nothing. */
+const GENERIC = new Set([
+  'pricing','price','plan','plans','cost','compare','comparison','change','changed','latest','version',
+  'news','update','small','app','team','tools','best','much','many','about','their','enterprise','seat',
+  'user','users','month','monthly','free','paid','per',
+]);
+
+function score(query: string, doc: (typeof MOCK_DOCS)[number]): number {
+  const q = expanded(query);
+  const meaningful = [...q].filter((t) => !GENERIC.has(t));
+  const tokens = meaningful.length ? new Set(meaningful) : q;
+  const title = tokenize(doc.title);
+  const text = tokenize(doc.content);
   let hits = 0;
-  for (const t of text) if (q.has(t)) hits++;
+  for (const t of title) if (tokens.has(t)) hits += 3;
+  for (const t of text) if (tokens.has(t)) hits += 1;
   return hits;
 }
 
@@ -23,13 +55,18 @@ export const mockProvider: SearchProvider = {
   async search(args: ProviderSearchArgs): Promise<RawResult[]> {
     let docs = [...MOCK_DOCS];
     if (args.site) docs = docs.filter((d) => d.url.includes(args.site!));
+    if (args.afterDate) docs = docs.filter((d) => d.publishedAt >= args.afterDate!);
+
     const scored = docs
       .map((d) => ({ doc: d, score: score(args.query, d) }))
       .filter((s) => s.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, args.num ?? 6);
+      .sort((a, b) => b.score - a.score);
+    const top = scored[0]?.score ?? 0;
+    const relevant = scored.filter((s) => s.score >= Math.max(2, top * 0.5));
 
-    const chosen = scored.length ? scored : docs.slice(0, 3).map((doc) => ({ doc, score: 1 }));
+    const chosen = relevant.length
+      ? relevant.slice(0, args.num ?? 6)
+      : scored.slice(0, 3);
     return chosen.map(({ doc }) => ({
       url: doc.url,
       title: doc.title,

@@ -1,0 +1,8 @@
+{
+  "id": "comparison-with-citations",
+  "category": "research",
+  "now": "2026-11-10T15:00:00Z",
+  "tz": "Asia/Kolkata",
+  "turns": ["Compare Neon, Supabase and AWS RDS pricing for a small app."],
+  "expect": { "searched": true, "cites": true, "containsAny": ["$19", "$30", "$599", "$0.115", "$7"] }
+}

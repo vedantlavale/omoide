@@ -1,13 +1,12 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // This repo is checked out inside a larger workspace; pin the root so
+  // Turbopack does not walk up to unrelated lockfiles.
+  turbopack: { root: import.meta.dirname },
   // PGlite ships a WASM Postgres build; it must be loaded by Node at runtime,
   // not bundled by webpack/turbopack.
   serverExternalPackages: ['@electric-sql/pglite'],
-  experimental: {
-    // Post-turn work (claim extraction, embeddings) runs after the response.
-    serverActions: { bodySizeLimit: '2mb' },
-  },
 };
 
 export default nextConfig;

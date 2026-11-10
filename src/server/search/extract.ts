@@ -72,7 +72,9 @@ export function selectPassages(markdown: string, query: string, opts: { maxChars
     .sort((a, b) => b.score - a.score)
     .slice(0, maxBlocks);
 
-  const chosen = (picked.length ? picked : scored.slice(0, 1)).sort((a, b) => a.i - b.i);
+  // Keep relevance order: the first passage is what the UI shows as the
+  // snippet and what the offline writer quotes, so it must be the best one.
+  const chosen = picked.length ? picked : scored.sort((a, b) => b.score - a.score).slice(0, 1);
 
   const out: string[] = [];
   let used = 0;

@@ -10,6 +10,9 @@ import { createHash } from 'node:crypto';
 import { getDb } from '../db/client';
 import type { Freshness } from '../types';
 
+/** Bump when provider normalisation or ranking semantics change. */
+const CACHE_VERSION = 'v3';
+
 export function cacheKey(provider: string, query: string, params: Record<string, unknown>): string {
   const normalised = JSON.stringify({
     q: query.trim().toLowerCase().replace(/\s+/g, ' '),
@@ -17,7 +20,7 @@ export function cacheKey(provider: string, query: string, params: Record<string,
       .filter(([, v]) => v !== undefined && v !== null && v !== '')
       .sort(([a], [b]) => a.localeCompare(b)),
   });
-  return createHash('sha256').update(`${provider}|${normalised}`).digest('hex');
+  return createHash('sha256').update(`${CACHE_VERSION}|${provider}|${normalised}`).digest('hex');
 }
 
 export function ttlFor(freshness: Freshness, news: boolean): number {

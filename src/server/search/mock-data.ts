@@ -83,7 +83,7 @@ A small Postgres instance typically costs $5 to $10 per month depending on memor
   },
   {
     url: 'https://www.hubspot.com/pricing/sales',
-    title: 'HubSpot Sales Hub — Pricing',
+    title: 'HubSpot Sales Hub CRM — Pricing',
     publishedAt: '2026-11-06',
     content: `# Sales Hub Pricing
 
@@ -97,7 +97,7 @@ All prices are billed annually. A 20-person team on Professional pays $2,000 per
   },
   {
     url: 'https://www.salesforce.com/sales/pricing/',
-    title: 'Salesforce Sales Cloud — Pricing',
+    title: 'Salesforce Sales Cloud CRM — Pricing',
     publishedAt: '2026-10-22',
     content: `# Sales Cloud Pricing
 
@@ -109,7 +109,7 @@ Prices are billed annually. Salesforce commonly quotes 15 to 25 percent discount
   },
   {
     url: 'https://www.pipedrive.com/en/pricing',
-    title: 'Pipedrive — Pricing',
+    title: 'Pipedrive CRM — Pricing',
     publishedAt: '2026-11-09',
     content: `# Pipedrive Pricing
 
@@ -135,7 +135,7 @@ Prices are billed annually. Zoho offers a free plan for up to three users.`,
   },
   {
     url: 'https://www.close.com/pricing',
-    title: 'Close — Pricing',
+    title: 'Close CRM — Pricing',
     publishedAt: '2026-10-11',
     content: `# Close Pricing
 

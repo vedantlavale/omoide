@@ -17,7 +17,7 @@ import { recall } from '../memory/recall';
 import { recheck } from '../memory/recheck';
 import { registerPending } from '../memory/pending';
 import { planTurn } from './planner';
-import { heuristicPlan, isFastPath, topicalQuery, rewriteFollowUp } from './heuristics';
+import { heuristicPlan, isFastPath, topicalQuery, rewriteFollowUp, meaningfulTopic } from './heuristics';
 import { synthesize, stripInvalidCitations } from './synthesize';
 import { webSearch, SourceRegistry } from '../search';
 import { getTimeContext, localDateString } from '../time/clock';
@@ -122,7 +122,13 @@ export async function* runTurn(input: TurnInput): AsyncGenerator<TurnEvent> {
 
     steps.push({ name: 'plan', ms: Date.now() - startedAt, detail: { intent: plan.intent, source: plan.source } });
 
-    const ranges = resolveTemporal(plan.temporalRefs, time);
+    let ranges = resolveTemporal(plan.temporalRefs, time);
+    // "Is your answer still correct today?" names the check date, not a memory
+    // to recall. When a re-check has real past anchors, today is not one of them.
+    if (plan.needsRecheck) {
+      const past = ranges.filter((r) => r.to < time.localDate);
+      if (past.length) ranges = past;
+    }
     trace.resolvedRanges = ranges.map((r) => ({ from: r.from, to: r.to, label: r.label }));
     yield { type: 'plan', plan, ranges: trace.resolvedRanges };
 
@@ -142,6 +148,7 @@ export async function* runTurn(input: TurnInput): AsyncGenerator<TurnEvent> {
         topic: plan.topic,
         query: input.message,
         threadId,
+        excludeTurnId: turnId,
       });
       trace.memoryStrategy = memory.strategy;
       trace.memoryMatches = memory.matches.length;
@@ -184,20 +191,30 @@ export async function* runTurn(input: TurnInput): AsyncGenerator<TurnEvent> {
           claims: claims.length,
           changed: changeReport.checks.filter((c) => c.status === 'changed').length,
           news: changeReport.news.length,
+          since: changeReport.sinceDate,
         },
       });
     }
 
     // ── search ────────────────────────────────────────────────────────────────
     let sources: EvidenceSource[] = [];
-    const shouldSearch = plan.needsSearch || (plan.needsMemory && memory.matches.length === 0 && Boolean(plan.topic));
+    // A memory miss should still be useful, but only if the user named a real
+    // subject. "What did I ask on 3 Nov" has no topic to search for.
+    const missTopic = meaningfulTopic(plan.topic);
+    const shouldSearch =
+      plan.needsSearch || (plan.needsMemory && memory.matches.length === 0 && Boolean(missTopic));
 
     if (shouldSearch) {
-      let queries = plan.queries.length ? [...plan.queries] : [];
-      if (memory.matches.length === 0 && !queries.length && plan.topic) queries = [plan.topic];
-      if (memory.matches.length === 0 && plan.topic && plan.topic.length > 3) {
+      let queries = (plan.queries.length ? [...plan.queries] : []).filter((q) => meaningfulTopic(q) !== null);
+      if (!queries.length && memory.matches[0]) {
+        // A memory question rarely names a searchable subject; the recalled turn does.
+        const recalled = topicalQuery(memory.matches[0].userText).slice(0, 120);
+        if (meaningfulTopic(recalled)) queries = [recalled];
+      }
+      if (memory.matches.length === 0 && !queries.length && missTopic) queries = [missTopic];
+      if (memory.matches.length === 0 && missTopic) {
         // A memory miss must still be useful: look up the topic as it stands today.
-        const topicQuery = topicalQuery(plan.topic);
+        const topicQuery = topicalQuery(missTopic);
         if (topicQuery && !queries.includes(topicQuery)) queries.push(topicQuery);
       }
       queries = [...new Set(queries.map((q) => q.trim()).filter(Boolean))].slice(0, 3);
@@ -209,10 +226,13 @@ export async function* runTurn(input: TurnInput): AsyncGenerator<TurnEvent> {
           {
             queries,
             freshness: plan.freshness,
-            after_date: plan.domainType === 'news' && ranges[0] ? ranges[0].from : null,
+            // Date bounds belong to the re-check's "news since" search, not to
+            // the search for current facts: pricing pages are usually older
+            // than the conversation we are checking.
+            after_date: null,
             news: plan.domainType === 'news',
           },
-          { registry, time },
+          { registry, time, maxSources: plan.intent === 'research' ? 6 : 4 },
         );
         sources = result.sources;
         trace.queries.push(...queries);

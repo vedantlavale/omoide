@@ -12,6 +12,8 @@
  * the same data directory would lock or corrupt it.
  */
 
+import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
 import { SCHEMA_SQL } from './schema';
 
 export interface Db {
@@ -32,7 +34,9 @@ function dataDir(): string {
 
 async function createPglite(): Promise<Db> {
   const { PGlite } = await import('@electric-sql/pglite');
-  const raw = await PGlite.create(dataDir());
+  const dir = dataDir();
+  await mkdir(path.dirname(path.resolve(dir)), { recursive: true });
+  const raw = await PGlite.create(dir);
   await raw.waitReady;
   await raw.exec(SCHEMA_SQL);
   return {

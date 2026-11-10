@@ -53,6 +53,9 @@ export function verifyHeuristically(claim: StoredClaim, pageText: string): { sta
   const text = normalise(pageText);
   if (!text) return { status: 'unverifiable', newValue: null };
   if (text.includes(normalise(claim.value))) return { status: 'unchanged', newValue: null };
+  // Only numeric claims can be "changed" by finding a different number on the
+  // page. A missing sentence is not evidence of a new price.
+  if (!/\d/.test(claim.value)) return { status: 'not_found', newValue: null };
 
   const monies = [...new Set(pageText.match(/[$€£]\s?\d[\d,]*(?:\.\d+)?/g) ?? [])];
   const different = monies.find((m) => normalise(m) !== normalise(claim.value));

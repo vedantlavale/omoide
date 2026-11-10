@@ -34,6 +34,26 @@ const STOP_ENTITIES = new Set(
   ),
 );
 
+const TOPIC_STOP = new Set(
+  'you your yours the and for with that this these those have has had was were are is be been being on in at of to it its my me i we us our do does did done ask asked say said tell told anything something nothing changed change since then correct still today tonight what when which who how about them their they he she please give show much many does'.split(
+    ' ',
+  ),
+);
+
+/**
+ * A topic is only searchable if it survives stop-word removal. This is what
+ * stops a memory miss from turning into a web search for "you on".
+ */
+export function meaningfulTopic(topic: string | null | undefined): string | null {
+  if (!topic) return null;
+  const words = topic
+    .toLowerCase()
+    .replace(/[^a-z0-9\s.+-]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !TOPIC_STOP.has(w));
+  return words.length >= 2 ? topic.trim() : null;
+}
+
 export function isFastPath(message: string): boolean {
   return GREETING.test(message.trim());
 }
@@ -51,14 +71,30 @@ export function extractEntities(message: string): string[] {
 }
 
 /** Remove temporal phrases and filler so the query is what a search engine wants. */
+const RECHECK_CLAUSE =
+  /\b(has any|have any|has it|have they|did any|is your (answer|reply)|is it still|are they still|still correct|still true|changed since|change since|since then|anything new|what changed)\b/i;
+
 export function topicalQuery(message: string): string {
   let q = message;
-  for (const phrase of findTemporalExpressions(message)) {
+  // "…on Monday we shortlisted 5 CRMs. Has any of them changed since?" → keep
+  // the subject clause; the second half is the question, not the topic.
+  const cut = q.search(RECHECK_CLAUSE);
+  if (cut > 8) q = q.slice(0, cut);
+  for (const phrase of findTemporalExpressions(q)) {
     q = q.replace(new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
   }
   q = q
+    .replace(/\bhow much (?:does|do|is)\b/gi, ' ')
+    .replace(/\bwhat(?:'s| is) the (?:price|cost) of\b/gi, ' ')
+    .replace(/\bhow much\b/gi, ' ')
+    .replace(/\bcosts?\b/gi, 'price')
+    .replace(/\b(is|was) (your|my) (answer|reply) (still )?(correct|true|accurate|valid)( today)?/gi, ' ')
     .replace(/\b(what did i (ask|say)|do you remember|remember when|can you|could you|please|for me|about|tell me|i asked you|i asked|has any of them|has any|still correct|still true|is your answer|my answer)\b/gi, ' ')
     .replace(/\s+/g, ' ')
+    .replace(/^[\s,.;:-]+/, '')
+    .replace(/^(on|and|so|but|we|i|you|it|they|the)\b[\s,]*/i, '')
+    .replace(/[\s,.;:-]+$/, '')
+    .replace(/^[\s,.;:-]+/, '')
     .trim();
   return q.length > 180 ? q.slice(0, 180).trim() : q;
 }

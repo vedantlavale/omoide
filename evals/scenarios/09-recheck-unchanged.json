@@ -1,0 +1,22 @@
+{
+  "id": "recheck-unchanged",
+  "category": "re-check",
+  "now": "2026-11-10T15:00:00Z",
+  "tz": "Asia/Kolkata",
+  "seedClaimTurns": [
+    {
+      "localDate": "2026-11-03",
+      "userText": "What does the Neon Launch plan cost?",
+      "assistantText": "Neon Launch is $19 per month and includes 10 GB of storage. [S1]",
+      "claims": [
+        { "entity": "Neon", "attribute": "Launch plan price", "value": "$19", "unit": "USD", "sourceUrl": "https://neon.com/pricing" }
+      ]
+    }
+  ],
+  "turns": ["Last Tuesday I asked you about Postgres hosting. Has any pricing changed since then?"],
+  "expect": {
+    "searched": true,
+    "mentionsDate": "3 Nov",
+    "containsAny": ["unchanged"]
+  }
+}

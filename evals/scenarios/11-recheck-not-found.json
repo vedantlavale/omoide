@@ -1,0 +1,21 @@
+{
+  "id": "recheck-not-found",
+  "category": "re-check",
+  "now": "2026-11-10T15:00:00Z",
+  "tz": "Asia/Kolkata",
+  "seedClaimTurns": [
+    {
+      "localDate": "2026-11-03",
+      "userText": "What does the Neon free plan include?",
+      "assistantText": "Neon's free plan includes unlimited storage. [S1]",
+      "claims": [
+        { "entity": "Neon", "attribute": "Free plan storage", "value": "unlimited", "sourceUrl": "https://neon.com/pricing" }
+      ]
+    }
+  ],
+  "turns": ["Last Tuesday I asked you about Postgres hosting. Has any pricing changed since then?"],
+  "expect": {
+    "searched": true,
+    "containsAny": ["couldn't confirm", "could not confirm"]
+  }
+}

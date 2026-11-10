@@ -1,0 +1,14 @@
+{
+  "id": "followup-pronoun-rewrite",
+  "category": "conversation",
+  "now": "2026-11-10T15:00:00Z",
+  "tz": "Asia/Kolkata",
+  "turns": [
+    "Compare HubSpot and Pipedrive pricing for a 20-person sales team.",
+    "what about their enterprise plan?"
+  ],
+  "expect": {
+    "searched": true,
+    "queriesInclude": "HubSpot"
+  }
+}

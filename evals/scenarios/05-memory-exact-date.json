@@ -1,0 +1,18 @@
+{
+  "id": "memory-exact-date",
+  "category": "memory",
+  "now": "2026-11-10T15:00:00Z",
+  "tz": "Asia/Kolkata",
+  "seedTurns": [
+    {
+      "localDate": "2026-11-03",
+      "message": "Compare managed Postgres hosting pricing: Neon, Supabase and AWS RDS."
+    }
+  ],
+  "turns": ["What did I ask you on 3 November?"],
+  "expect": {
+    "searched": false,
+    "mentionsDate": "3 Nov",
+    "containsAny": ["Postgres"]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "recheck-changed",
+  "category": "re-check",
+  "now": "2026-11-10T15:00:00Z",
+  "tz": "Asia/Kolkata",
+  "seedClaimTurns": [
+    {
+      "localDate": "2026-11-03",
+      "userText": "What does Supabase Pro cost?",
+      "assistantText": "Supabase Pro is $25 per month. [S1]",
+      "claims": [
+        { "entity": "Supabase", "attribute": "Pro plan price", "value": "$25", "unit": "USD", "sourceUrl": "https://supabase.com/pricing" }
+      ]
+    }
+  ],
+  "turns": ["What did I ask you on 3 November, and is your answer still correct today?"],
+  "expect": {
+    "searched": true,
+    "mentionsDate": "3 Nov",
+    "containsAny": ["$30", "changed"]
+  }
+}

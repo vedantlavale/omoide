@@ -130,7 +130,14 @@ export function toStored(
   input: { sources: EvidenceSource[]; now: Date; localDate: string },
 ): StoredClaim[] {
   const byId = new Map(input.sources.map((s) => [s.id, s]));
-  return raw.map((c) => ({
+  // The same fact often appears in several passages; store it once.
+  const seen = new Set<string>();
+  return raw.filter((c) => {
+    const key = `${c.entity.toLowerCase()}|${c.attribute.toLowerCase()}|${c.value.toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map((c) => ({
     id: randomUUID(),
     entity: c.entity,
     attribute: c.attribute,

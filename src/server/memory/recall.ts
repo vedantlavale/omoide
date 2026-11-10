@@ -37,7 +37,21 @@ export interface RecallInput {
   /** Free-text used for ranking inside a date range. */
   query?: string | null;
   threadId: string;
+  /** The turn currently being answered: never a memory of itself. */
+  excludeTurnId?: string | null;
   userId?: string;
+}
+
+/** Drop the in-flight turn and any half-written pair: memory is only complete turns. */
+function usable<T extends { userMessage: MessageRow; assistantMessage: MessageRow }>(
+  pairs: T[],
+  excludeTurnId?: string | null,
+): T[] {
+  return pairs.filter(
+    (p) =>
+      p.assistantMessage.content.trim().length > 20 &&
+      (!excludeTurnId || (p.userMessage.turn_id ?? '') !== excludeTurnId),
+  );
 }
 
 function summarise(text: string, max = 1600): string {
@@ -122,7 +136,8 @@ export async function recall(input: RecallInput): Promise<MemoryContext> {
     const pairs = await messagesByDates(searchedDates, userId, 12);
     if (pairs.length) {
       // Prefer turns that also match the topic, when a topic exists.
-      const ordered = input.topic ? await rankPairsByTopic(pairs, input.topic) : pairs;
+      const filtered = usable(pairs, input.excludeTurnId);
+      const ordered = input.topic ? await rankPairsByTopic(filtered, input.topic) : filtered;
       const chosen = ordered.slice(-MAX_MATCHES);
       result.matches = await buildMatches(chosen, new Set(chosen.map((p) => p.userMessage.thread_id)));
       result.strategy = 'exact-date';
@@ -132,7 +147,7 @@ export async function recall(input: RecallInput): Promise<MemoryContext> {
 
   // 2. Nearby date.
   if (searchedDates.length) {
-    const pairs = await messagesByDates(widen(searchedDates), userId, 12);
+    const pairs = usable(await messagesByDates(widen(searchedDates), userId, 12), input.excludeTurnId);
     if (pairs.length) {
       const chosen = pairs.slice(-MAX_MATCHES);
       result.matches = await buildMatches(chosen, new Set(chosen.map((p) => p.userMessage.thread_id)));
@@ -144,7 +159,7 @@ export async function recall(input: RecallInput): Promise<MemoryContext> {
 
   // 3. Topic retrieval: FTS ∪ vector.
   if (input.topic) {
-    const pairs = await topicSearch(input.topic, input.query ?? input.topic, userId);
+    const pairs = usable(await topicSearch(input.topic, input.query ?? input.topic, userId), input.excludeTurnId);
     if (pairs.length) {
       const chosen = pairs.slice(0, MAX_MATCHES);
       result.matches = await buildMatches(chosen, new Set(chosen.map((p) => p.userMessage.thread_id)));
@@ -158,7 +173,7 @@ export async function recall(input: RecallInput): Promise<MemoryContext> {
   const last = await latestAssistantMessage(input.threadId).catch(() => null);
   if (last && last.content) {
     const recent = await threadMessagesForPrompt(input.threadId, 6).catch(() => []);
-    const pairs = pairTurns(recent.length ? recent : [last]);
+    const pairs = usable(pairTurns(recent.length ? recent : [last]), input.excludeTurnId);
     const chosen = pairs.slice(-1);
     if (chosen.length) {
       result.matches = await buildMatches(chosen, new Set([last.thread_id]));

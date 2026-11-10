@@ -110,7 +110,10 @@ export function mockAnswer(input: AnswerInputs): string {
   if (sources.length && !changeReport) {
     const findings = sources
       .slice(0, 5)
-      .map((s) => `- **${s.title}** — ${firstSentence(s.passages[0] ?? '', 220)} [${s.id}]`)
+      .map((s) => {
+        const passage = s.passages.find((p) => /[$€£]\s?\d/.test(p)) ?? s.passages[0] ?? '';
+        return `- **${s.title}** — ${firstSentence(passage, 220)} [${s.id}]`;
+      })
       .join('\n');
     blocks.push(`Here's what I found, as of ${humanDate(time.localDate)}:\n${findings}`);
   }
