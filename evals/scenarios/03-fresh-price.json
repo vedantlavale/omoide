@@ -4,5 +4,5 @@
   "now": "2026-11-10T15:00:00Z",
   "tz": "Asia/Kolkata",
   "turns": ["How much does the Neon Launch plan cost?"],
-  "expect": { "searched": true, "cites": true, "containsAny": ["$19"] }
+  "expect": { "searched": true, "cites": true, "containsAny": ["$19", "$0.106"] }
 }

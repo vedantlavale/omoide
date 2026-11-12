@@ -9,15 +9,20 @@
  */
 
 import path from 'node:path';
+import { loadDotEnv } from './load-env';
 import { SourceRegistry, webSearch } from '../src/server/search';
 import { getTimeContext } from '../src/server/time/clock';
 import { activeSearchProviders, getConfig, resetConfigCache } from '../src/server/config';
 import { closeDb } from '../src/server/db/client';
 
+loadDotEnv();
+
 async function main() {
   const query = process.argv.slice(2).join(' ').trim() || 'neon launch plan price';
   // Never touch the dev server's data directory: PGlite is single-process.
+  // And never the hosted database either — the smoke test is throwaway.
   process.env.PGLITE_DIR ||= path.join(process.cwd(), '.data', 'smoke');
+  delete process.env.DATABASE_URL;
   resetConfigCache();
   const config = getConfig();
 

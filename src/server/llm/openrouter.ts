@@ -207,6 +207,76 @@ export function parseJsonLoose<T>(content: string): T {
   return JSON.parse(body) as T;
 }
 
+/**
+ * Decision models (alpha). Instead of prose, these answer typed questions —
+ * boolean ("noul"), one-of-many ("choice"), or an ordered "score" scale — and
+ * return the chosen value plus a full probability distribution over the
+ * options. Used by the eval judge panel: verdicts, not essays.
+ *
+ * Endpoint note: this is NOT the chat endpoint, and the base path has no /v1.
+ * A model that is not a decisions model is rejected with a 4xx here; callers
+ * use that to fall back to the text-judge path.
+ */
+const DECISIONS_ENDPOINT = 'https://openrouter.ai/api/alpha/decisions';
+
+export interface DecisionAnswer {
+  type: string;
+  score?: number;
+  noul?: number;
+  choice?: string;
+  confidence?: number;
+  probabilities?: Record<string, number>;
+  legend?: Record<string, string>;
+}
+
+export interface DecisionsResult {
+  model: string;
+  answers: Record<string, DecisionAnswer>;
+  usage: { inputTokens: number; outputTokens: number; cost?: number };
+}
+
+export async function decide(opts: {
+  model: string;
+  state: string | Record<string, unknown>;
+  questions: Record<string, unknown>;
+  timeoutMs?: number;
+}): Promise<DecisionsResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 20_000);
+  try {
+    const res = await fetch(DECISIONS_ENDPOINT, {
+      method: 'POST',
+      headers: headers(),
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: opts.model,
+        state: opts.state,
+        questions: opts.questions,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`decisions ${res.status}: ${body.slice(0, 300)}`);
+    }
+    const json = (await res.json()) as {
+      model: string;
+      answers: Record<string, DecisionAnswer>;
+      usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
+    };
+    return {
+      model: json.model,
+      answers: json.answers ?? {},
+      usage: {
+        inputTokens: json.usage?.input_tokens ?? 0,
+        outputTokens: json.usage?.output_tokens ?? 0,
+        cost: json.usage?.cost,
+      },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function embed(texts: string[]): Promise<number[][] | null> {
   const c = getConfig();
   if (!texts.length || !c.openrouterKey) return null;

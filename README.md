@@ -44,6 +44,8 @@ user message
 
 Everything before the final stream is deterministic and inspectable, which is what makes cheap models reliable here. The model still holds the real `web_search` tool for gaps and follow-ups — a pipeline where the next step is predictable, an agent where it is not.
 
+For the full picture — every table and field, what each pipeline step reads and writes, and real sample rows — see [`docs/architecture-detailed.png`](docs/architecture-detailed.png) (editable source: `docs/architecture-detailed.excalidraw`).
+
 Full reasoning, rejected alternatives and next steps: **[DESIGN.md](./DESIGN.md)**.
 
 ## What you can try
@@ -63,7 +65,7 @@ The empty state has a **Load demo history** button. It runs three real turns thr
 | `npm run dev` | App on :3000 (embedded Postgres, auto-migrated) |
 | `npm test` | 45 unit tests: date resolution, ranking, canonical URLs, citations, claim extraction, re-check heuristics |
 | `npm run eval` | 12 scripted conversations, fresh DB each, deterministic assertions; writes `evals/report.json` |
-| `EVAL_LIVE=1 npm run eval` | Same scenarios against real models and search, plus an LLM judge (costs tokens) |
+| `EVAL_LIVE=1 npm run eval` | Same scenarios against real models and search, plus a two-decision-model judge panel that fails only on unanimous low scores and flags dissents (costs tokens) |
 | `npm run search:smoke -- "neon pricing"` | Prints exactly what a search returns: providers, sources, passages, hashes |
 | `npm run typecheck` / `npm run build` | TypeScript / production build |
 

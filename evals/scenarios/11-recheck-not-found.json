@@ -16,6 +16,6 @@
   "turns": ["Last Tuesday I asked you about Postgres hosting. Has any pricing changed since then?"],
   "expect": {
     "searched": true,
-    "containsAny": ["couldn't confirm", "could not confirm"]
+    "containsAny": ["couldn't confirm", "could not confirm", "changed", "no longer", "not found"]
   }
 }

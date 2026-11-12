@@ -1,37 +1,54 @@
 'use client';
 
+import { useState } from 'react';
+import { siteLabel } from './citations';
+import { ChevronIcon } from './icons';
+import { SiteAvatar } from './Markdown';
 import type { Source } from './types';
 
-export function Sources({ sources }: { sources: Source[] }) {
-  if (!sources.length) return null;
+function Card({ source, n }: { source: Source; n?: number }) {
   return (
-    <details className="sources">
-      <summary>
-        <span aria-hidden>📎</span>
-        {sources.length} source{sources.length === 1 ? '' : 's'} read
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-faint)' }}>
-          {sources.filter((s) => s.snippetOnly).length ? 'some snippet-only' : 'full pages'}
-        </span>
-      </summary>
-      <ul className="sources-list">
-        {sources.map((s) => (
-          <li className="source-item" key={s.id}>
-            <span className="source-id">{s.id}</span>
-            <div style={{ minWidth: 0 }}>
-              <a className="source-title" href={s.url} target="_blank" rel="noreferrer noopener">
-                {s.title || s.site}
-              </a>
-              <span className="source-site">
-                {' '}
-                · {s.site}
-                {s.publishedAt ? ` · ${s.publishedAt}` : ''}
-                {s.snippetOnly ? ' · snippet only' : ''}
-              </span>
-              {s.passages?.[0] ? <div className="source-snippet">{s.passages[0]}</div> : null}
-            </div>
-          </li>
+    <a className="source-card" href={source.url} target="_blank" rel="noreferrer noopener">
+      <span className="source-card-top">
+        <SiteAvatar source={source} />
+        <span className="source-card-site">{siteLabel(source)}</span>
+        {n ? <span className="source-card-n">{n}</span> : null}
+      </span>
+      <span className="source-card-title">{source.title || siteLabel(source)}</span>
+    </a>
+  );
+}
+
+/** Cited sources first, numbered to match the chips in the answer; the rest are one click away. */
+export function Sources({ cited, others }: { cited: Source[]; others: Source[] }) {
+  const [showOthers, setShowOthers] = useState(false);
+  if (!cited.length && !others.length) return null;
+
+  // Nothing cited (e.g. a refusal or memory answer): show a few, not a wall.
+  const lead = cited.length ? cited : others.slice(0, 3);
+  const rest = cited.length ? others : others.slice(3);
+
+  return (
+    <div className="sources">
+      <div className="sources-label">Sources</div>
+      <div className="source-grid">
+        {lead.map((source, i) => (
+          <Card key={source.id} source={source} n={cited.length ? i + 1 : undefined} />
         ))}
-      </ul>
-    </details>
+        {showOthers ? rest.map((source) => <Card key={source.id} source={source} />) : null}
+      </div>
+      {rest.length ? (
+        <button
+          className="more-button"
+          onClick={() => setShowOthers((v) => !v)}
+          type="button"
+          aria-expanded={showOthers}
+          data-open={showOthers}
+        >
+          {showOthers ? 'Show fewer' : `${rest.length} more read`}
+          <ChevronIcon />
+        </button>
+      ) : null}
+    </div>
   );
 }

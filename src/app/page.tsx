@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Composer } from '@/components/chat/Composer';
+import { ClockIcon, CloseIcon, GlobeIcon, MenuIcon, TableIcon, TrendIcon } from '@/components/chat/icons';
 import { MessageView } from '@/components/chat/MessageView';
 import { Sidebar } from '@/components/chat/Sidebar';
 import type { ChatMessage, Source, ThreadSummary } from '@/components/chat/types';
@@ -10,28 +11,15 @@ interface ConfigResponse {
   providers: Array<{ name: string; configured: boolean; role: string }>;
   problems: string[];
   mock: boolean;
-  models: { main: string; utility: string };
   today: string;
   frozenClock: string | null;
 }
 
 const EXAMPLES = [
-  {
-    text: 'What did I ask you last Tuesday, and is your answer still correct?',
-    label: 'memory + re-check',
-  },
-  {
-    text: 'Compare managed Postgres pricing: Neon, Supabase and AWS RDS.',
-    label: 'comparison with citations',
-  },
-  {
-    text: 'Has HubSpot changed Sales Hub pricing this month?',
-    label: 'fresh facts',
-  },
-  {
-    text: "What's the latest Next.js version and what changed?",
-    label: 'web lookup',
-  },
+  { text: "What's the latest Next.js version, and what changed?", icon: <GlobeIcon /> },
+  { text: 'Compare Neon, Supabase and AWS RDS pricing', icon: <TableIcon /> },
+  { text: 'What did I ask you last Tuesday?', icon: <ClockIcon /> },
+  { text: 'Has HubSpot changed Sales Hub pricing this month?', icon: <TrendIcon /> },
 ];
 
 function draftId(prefix: string): string {
@@ -77,8 +65,8 @@ export default function Page() {
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [status, setStatus] = useState<string | null>(null);
-  const [searchNote, setSearchNote] = useState<string | null>(null);
+  const [steps, setSteps] = useState<string[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState<string | null>(null);
@@ -109,7 +97,11 @@ export default function Page() {
   useEffect(() => {
     const el = scrollerRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, status, searchNote]);
+  }, [messages, steps]);
+
+  const pushStep = useCallback((text: string) => {
+    setSteps((prev) => (prev[prev.length - 1] === text ? prev : [...prev, text]));
+  }, []);
 
   async function openThread(id: string) {
     if (busy) return;
@@ -120,6 +112,7 @@ export default function Page() {
       if (!res.ok) throw new Error('Could not load that conversation.');
       const data = await res.json();
       setActiveId(id);
+      setSidebarOpen(false);
       setMessages(mapMessages(data.messages));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load that conversation.');
@@ -133,16 +126,15 @@ export default function Page() {
     setActiveId(null);
     setMessages([]);
     setError(null);
-    setStatus(null);
-    setSearchNote(null);
+    setSteps([]);
+    setSidebarOpen(false);
     setBusy(false);
   }
 
   async function send(text: string) {
     if (busy) return;
     setError(null);
-    setSearchNote(null);
-    setStatus('Thinking…');
+    setSteps(['Thinking…']);
     setBusy(true);
 
     const userMessage: ChatMessage = {
@@ -195,20 +187,17 @@ export default function Page() {
             setActiveId(event.threadId);
             break;
           case 'status':
-            setStatus(event.text as string);
+            pushStep(event.text as string);
             break;
           case 'plan': {
             const ranges = (event.ranges ?? []) as Array<{ label: string }>;
-            if (ranges.length) setStatus(`Checking ${ranges.map((r) => r.label).join(', ')}…`);
+            if (ranges.length) pushStep(`Checking ${ranges.map((r) => r.label).join(', ')}…`);
             break;
           }
           case 'sources':
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, sources: event.sources as Source[] } : m)),
             );
-            break;
-          case 'search':
-            setSearchNote(`Searched: ${(event.queries as string[]).join(' · ')}`);
             break;
           case 'delta':
             setMessages((prev) =>
@@ -220,8 +209,7 @@ export default function Page() {
             break;
           case 'done': {
             sawDone = true;
-            setStatus(null);
-            setSearchNote(null);
+            setSteps([]);
             setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, pending: false } : m)));
             const finishedThread = event.threadId as string;
             fetch(`/api/threads?id=${encodeURIComponent(finishedThread)}`, { cache: 'no-store' })
@@ -243,7 +231,7 @@ export default function Page() {
       }
     } finally {
       setBusy(false);
-      setStatus(null);
+      setSteps([]);
       if (!sawDone) {
         setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, pending: false } : m)));
       }
@@ -254,7 +242,7 @@ export default function Page() {
   function stop() {
     abortRef.current?.abort();
     setBusy(false);
-    setStatus(null);
+    setSteps([]);
     setMessages((prev) => prev.map((m) => (m.pending ? { ...m, pending: false } : m)));
   }
 
@@ -263,14 +251,14 @@ export default function Page() {
     setSeeding('Starting…');
     try {
       const res = await fetch('/api/demo/seed', { method: 'POST' });
-      if (!res.ok) throw new Error('Could not start the demo seed.');
+      if (!res.ok) throw new Error('Could not add sample chats.');
       await readNdjson(res, (event) => {
         if (event.type === 'progress') setSeeding(event.text as string);
         if (event.type === 'error') setError(event.text as string);
       });
       await refreshThreads();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Seeding failed.');
+      setError(err instanceof Error ? err.message : 'Could not add sample chats.');
     } finally {
       setSeeding(null);
     }
@@ -283,8 +271,8 @@ export default function Page() {
     await refreshThreads();
   }
 
-  const configuredProviders = config?.providers.filter((p) => p.configured).map((p) => p.name) ?? [];
   const showEmpty = messages.length === 0 && !loadingThread;
+  const lastId = messages[messages.length - 1]?.id;
 
   return (
     <div className="app">
@@ -295,42 +283,51 @@ export default function Page() {
         onNew={newChat}
         onResetDemo={resetDemo}
         onLoadDemo={loadDemo}
-        providers={config?.providers ?? []}
+        seeding={seeding}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <main className="main">
         <div className="topbar">
-          <div className="topbar-title">{activeThread?.title ?? 'New chat'}</div>
-          <div className="topbar-meta">
-            {config?.frozenClock ? <span title="AGENT_NOW is set">clock frozen</span> : null}
-            {config?.mock ? <span>offline mode</span> : null}
-            <span>{new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-          </div>
+          <button
+            className="icon-button menu-button"
+            onClick={() => setSidebarOpen(true)}
+            type="button"
+            aria-label="Open chats"
+          >
+            <MenuIcon />
+          </button>
+          <div className="topbar-title">{activeThread?.title ?? ''}</div>
+          {config?.frozenClock ? (
+            <span className="pill" title="AGENT_NOW is set, so “today” is fixed">
+              Date fixed · {config.today}
+            </span>
+          ) : null}
+          {config?.mock ? <span className="pill">Offline demo</span> : null}
         </div>
 
         {config?.problems.length ? (
-          <div className="banner" data-kind="error">
-            <strong>Setup needed.</strong> {config.problems.join(' ')} The app runs, but it cannot answer until this is fixed.
+          <div className="banner" role="alert">
+            <span>
+              <strong>Setup needed:</strong> {config.problems.join(' ')}
+            </span>
           </div>
         ) : null}
 
         {error ? (
-          <div className="banner" data-kind="error" role="alert">
-            {error}
+          <div className="banner" role="alert">
+            <span>{error}</span>
+            <button className="icon-button" onClick={() => setError(null)} type="button" aria-label="Dismiss">
+              <CloseIcon />
+            </button>
           </div>
         ) : null}
 
         <div className="scroller" ref={scrollerRef}>
           {showEmpty ? (
             <div className="empty">
-              <div className="empty-kicker">A research agent with memory</div>
-              <h1>Ask the web. Then ask me what I said.</h1>
-              <p className="lede">
-                I search the live web and cite every fact. I also keep what we discussed — indexed by the day you said
-                it — so I can answer “what did I ask you on 3 November?” and then re-check whether the answer still
-                holds.
-              </p>
-
+              <h1>What do you want to know?</h1>
               <div className="examples">
                 {EXAMPLES.map((example) => (
                   <button
@@ -339,53 +336,26 @@ export default function Page() {
                     onClick={() => void send(example.text)}
                     type="button"
                   >
+                    <span className="example-icon">{example.icon}</span>
                     {example.text}
-                    <span>{example.label}</span>
                   </button>
                 ))}
-              </div>
-
-              <div className="demo-box">
-                <p>
-                  <strong>Memory needs history.</strong> A fresh install has none — ask a memory question and I will
-                  say so rather than invent one. If you want to see recall and re-checks working, load three backdated
-                  conversations (Postgres pricing, a CRM shortlist, a Next.js question). They are generated by running
-                  real searches, then marked as demo data.
-                </p>
-                <button className="demo-button" onClick={loadDemo} disabled={Boolean(seeding)} type="button">
-                  {seeding ? seeding : 'Load demo history'}
-                </button>
               </div>
             </div>
           ) : (
             <div className="thread">
               {messages.map((message) => (
-                <MessageView key={message.id} message={message} />
+                <MessageView
+                  key={message.id}
+                  message={message}
+                  steps={busy && message.id === lastId ? steps : undefined}
+                />
               ))}
-
-              {busy ? (
-                <div className="status-line" aria-live="polite">
-                  <span className="pulse" />
-                  <span>{status ?? 'Working…'}</span>
-                  {searchNote ? <span style={{ color: 'var(--ink-faint)' }}>· {searchNote}</span> : null}
-                </div>
-              ) : null}
-
-              {!busy && searchNote ? <div className="status-line">{searchNote}</div> : null}
             </div>
           )}
         </div>
 
-        <Composer
-          onSend={send}
-          onStop={stop}
-          busy={busy}
-          hint={
-            config
-              ? `${config.models.main.split('/').pop()} · ${configuredProviders.filter((p) => p !== 'Postgres').join(' + ')}`
-              : ''
-          }
-        />
+        <Composer onSend={send} onStop={stop} busy={busy} />
       </main>
     </div>
   );

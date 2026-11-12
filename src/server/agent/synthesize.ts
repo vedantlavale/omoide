@@ -171,7 +171,10 @@ export async function* synthesize(input: SynthesizeInput): AsyncGenerator<SynthE
 /** The model may cite ids that do not exist (or that a later search renumbered). */
 export function stripInvalidCitations(text: string, validIds: string[]): string {
   const valid = new Set(validIds);
-  return text.replace(/\[(S\d+)\]/g, (match, id: string) => (valid.has(id) ? match : '')).replace(/[ \t]{2,}/g, ' ');
+  return text
+    .replace(/\[(S\d+)\]/g, (match, id: string) => (valid.has(id) ? match : ''))
+    .replace(/\[(?:news|source|sources|web|search)\](?!\()/gi, '')
+    .replace(/[ \t]{2,}/g, ' ');
 }
 
 function safeParse(json: string): Record<string, any> | null {

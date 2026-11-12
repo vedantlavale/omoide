@@ -1,16 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { CheckIcon, CopyIcon, SlidersIcon } from './icons';
+import { prepareAnswer } from './citations';
 import { Markdown } from './Markdown';
 import { Sources } from './Sources';
 import { TracePanel } from './TracePanel';
 import type { ChatMessage } from './types';
-
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 function fullLabel(iso: string): string {
   const d = new Date(iso);
@@ -25,17 +21,39 @@ function fullLabel(iso: string): string {
   });
 }
 
-export function MessageView({ message }: { message: ChatMessage }) {
+export function Progress({ steps }: { steps: string[] }) {
+  return (
+    <ul className="progress" aria-live="polite">
+      {steps.map((text, i) => {
+        const active = i === steps.length - 1;
+        return (
+          <li key={`${i}-${text}`} data-active={active}>
+            {active ? <span className="pulse" /> : <CheckIcon size={13} />}
+            <span>{text}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function MessageView({ message, steps }: { message: ChatMessage; steps?: string[] }) {
   const [showTrace, setShowTrace] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const prepared = useMemo(
+    () => prepareAnswer(message.content, message.sources ?? [], Boolean(message.pending)),
+    [message.content, message.sources, message.pending],
+  );
+
   async function copy() {
     try {
-      await navigator.clipboard.writeText(message.content);
+      // Copy with readable [1] markers rather than internal ids.
+      await navigator.clipboard.writeText(prepared.text.replace(/\[(\d+)\]\(#cite-\d+\)/g, '[$1]'));
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     } catch {
-      /* clipboard may be blocked; nothing to do */
+      /* clipboard may be blocked */
     }
   }
 
@@ -49,33 +67,42 @@ export function MessageView({ message }: { message: ChatMessage }) {
     );
   }
 
+  const waiting = message.pending && !message.content;
+  const canAct = !message.pending && message.content;
+
   return (
     <div className="msg msg-assistant">
-      <div className="body">
-        <Markdown content={message.content} sources={message.sources} />
-        {message.pending ? <span className="typing-caret" aria-hidden /> : null}
-      </div>
+      {waiting ? <Progress steps={steps?.length ? steps : ['Thinking…']} /> : null}
 
-      {message.sources?.length ? <Sources sources={message.sources} /> : null}
+      {message.content ? (
+        <div className="body">
+          <Markdown text={prepared.text} cited={prepared.cited} />
+          {message.pending ? <span className="typing-caret" aria-hidden /> : null}
+        </div>
+      ) : null}
 
-      <div className="msg-meta">
-        <span title={fullLabel(message.createdAt)}>{timeLabel(message.createdAt)}</span>
-        {!message.pending && message.content ? (
-          <button className="ghost-button" onClick={copy} type="button">
-            {copied ? '✓ copied' : 'copy'}
+      {!message.pending ? <Sources cited={prepared.cited} others={prepared.others} /> : null}
+
+      {canAct ? (
+        <div className="actions">
+          <button className="icon-button" onClick={copy} type="button" aria-label="Copy answer" title="Copy">
+            {copied ? <CheckIcon /> : <CopyIcon />}
           </button>
-        ) : null}
-        {!message.pending && !message.id.startsWith('draft-') ? (
-          <button
-            className="ghost-button"
-            onClick={() => setShowTrace((v) => !v)}
-            type="button"
-            aria-expanded={showTrace}
-          >
-            {showTrace ? 'hide trace' : 'how I answered'}
-          </button>
-        ) : null}
-      </div>
+          {!message.id.startsWith('draft-') ? (
+            <button
+              className="icon-button"
+              onClick={() => setShowTrace((v) => !v)}
+              type="button"
+              aria-expanded={showTrace}
+              aria-label="How this was answered"
+              title="How this was answered"
+              data-on={showTrace}
+            >
+              <SlidersIcon />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {showTrace ? <TracePanel messageId={message.id} /> : null}
     </div>

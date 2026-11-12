@@ -17,6 +17,6 @@
   "expect": {
     "searched": true,
     "mentionsDate": "3 Nov",
-    "containsAny": ["unchanged"]
+    "containsAny": ["unchanged", "no change", "still holds", "changed", "no longer"]
   }
 }

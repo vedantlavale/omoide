@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   // PGlite ships a WASM Postgres build; it must be loaded by Node at runtime,
   // not bundled by webpack/turbopack.
   serverExternalPackages: ['@electric-sql/pglite'],
+  // The dev badge overlaps the composer and sidebar; compile/runtime errors still show.
+  devIndicators: false,
 };
 
 export default nextConfig;

@@ -54,47 +54,72 @@ function scenarios(today: string) {
   ];
 }
 
+/**
+ * Seeding is idempotent: it wipes existing demo history first, so clicking
+ * "Load demo history" twice yields one clean copy, not duplicates that make
+ * date recall report the same conversation twice.
+ */
+
+/** One seed at a time — two concurrent seeds would interleave and duplicate. */
+let seeding = false;
+
 export async function* seedDemo(): AsyncGenerator<SeedEvent> {
-  const time = getTimeContext();
-  const plan = scenarios(time.localDate);
-  let created = 0;
-
-  for (const [index, scenario] of plan.entries()) {
-    yield {
-      type: 'progress',
-      text: `Researching ${scenario.title} (${index + 1}/${plan.length})…`,
-    };
-
-    const thread = await ensureThread({ id: scenario.id, title: scenario.title, isDemo: true });
-    const createdAt = `${scenario.localDate}T09:30:00.000Z`;
-    await ensureThread({ id: thread.id, title: scenario.title, isDemo: true });
-
-    try {
-      let assistantId: string | null = null;
-      for await (const event of runTurn({
-        threadId: thread.id,
-        message: scenario.message,
-        tz: time.tz,
-        signal: new AbortController().signal,
-        isDemo: true,
-        backdate: { localDate: scenario.localDate, createdAt },
-      })) {
-        if (event.type === 'done') assistantId = event.messageId;
-        if (event.type === 'error') throw new Error(event.message);
-      }
-      if (assistantId) await postTurn(assistantId);
-      created++;
-      yield { type: 'progress', text: `Saved “${scenario.title}” on ${scenario.localDate}.` };
-    } catch (err) {
-      yield {
-        type: 'error',
-        text: `Could not seed “${scenario.title}”: ${err instanceof Error ? err.message : String(err)}`,
-      };
-      return;
-    }
+  if (seeding) {
+    yield { type: 'error', text: 'A demo seed is already running — wait for it to finish.' };
+    return;
   }
+  seeding = true;
+  try {
+    const time = getTimeContext();
+    const wiped = await clearDemo();
+    if (wiped > 0) {
+      yield {
+        type: 'progress',
+        text: `Cleared ${wiped} old demo conversation${wiped === 1 ? '' : 's'} — seeding fresh…`,
+      };
+    }
+    const plan = scenarios(time.localDate);
+    let created = 0;
 
-  yield { type: 'done', threads: created };
+    for (const [index, scenario] of plan.entries()) {
+      yield {
+        type: 'progress',
+        text: `Researching ${scenario.title} (${index + 1}/${plan.length})…`,
+      };
+
+      const thread = await ensureThread({ id: scenario.id, title: scenario.title, isDemo: true });
+      const createdAt = `${scenario.localDate}T09:30:00.000Z`;
+      await ensureThread({ id: thread.id, title: scenario.title, isDemo: true });
+
+      try {
+        let assistantId: string | null = null;
+        for await (const event of runTurn({
+          threadId: thread.id,
+          message: scenario.message,
+          tz: time.tz,
+          signal: new AbortController().signal,
+          isDemo: true,
+          backdate: { localDate: scenario.localDate, createdAt },
+        })) {
+          if (event.type === 'done') assistantId = event.messageId;
+          if (event.type === 'error') throw new Error(event.message);
+        }
+        if (assistantId) await postTurn(assistantId);
+        created++;
+        yield { type: 'progress', text: `Saved “${scenario.title}” on ${scenario.localDate}.` };
+      } catch (err) {
+        yield {
+          type: 'error',
+          text: `Could not seed “${scenario.title}”: ${err instanceof Error ? err.message : String(err)}`,
+        };
+        return;
+      }
+    }
+
+    yield { type: 'done', threads: created };
+  } finally {
+    seeding = false;
+  }
 }
 
 export async function resetDemo(): Promise<number> {

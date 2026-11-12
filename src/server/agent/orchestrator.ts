@@ -297,8 +297,10 @@ export async function* runTurn(input: TurnInput): AsyncGenerator<TurnEvent> {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      // Record even abort-style failures: a swallowed error is an invisible one
+      // when you are diagnosing why a trace ends with no answer.
+      trace.errors.push(`synthesize: ${message}`);
       if (!/abort/i.test(message)) {
-        trace.errors.push(`synthesize: ${message}`);
         yield { type: 'error', message: 'The model could not finish this answer. The evidence is saved — try again.' };
         if (!answer) {
           answer = 'I could not finish that answer — the model connection failed. Nothing above is guessed; ask again and I will retry.';

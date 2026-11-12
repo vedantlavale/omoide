@@ -14,7 +14,8 @@ export interface AppConfig {
     main: string;
     utility: string;
     embedding: string;
-    judge: string;
+    /** Judge panel for live evals: decision models grade, a text model is the fallback. */
+    judges: string[];
   };
   search: {
     tinyfish: string | null;
@@ -30,6 +31,17 @@ function env(key: string): string | null {
   return v ? v : null;
 }
 
+/** "a,b,c  # comment" → ["a","b","c"] — strips inline comments and trims. */
+function envList(key: string): string[] {
+  const raw = env(key);
+  if (!raw) return [];
+  return raw
+    .split('#')[0]
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 let cached: AppConfig | null = null;
 
 export function getConfig(): AppConfig {
@@ -41,7 +53,11 @@ export function getConfig(): AppConfig {
       main: env('MAIN_MODEL') ?? 'deepseek/deepseek-chat-v3.1',
       utility: env('UTILITY_MODEL') ?? 'google/gemini-2.5-flash-lite',
       embedding: env('EMBEDDING_MODEL') ?? 'openai/text-embedding-3-small',
-      judge: env('JUDGE_MODEL') ?? 'anthropic/claude-haiku-4.5',
+      judges: envList('JUDGE_MODELS').length
+        ? envList('JUDGE_MODELS')
+        : env('JUDGE_MODEL')
+          ? [env('JUDGE_MODEL')!]
+          : ['anthropic/claude-haiku-4.5'],
     },
     search: {
       tinyfish: env('TINYFISH_API_KEY'),

@@ -1,5 +1,6 @@
 'use client';
 
+import { PlusIcon } from './icons';
 import type { ThreadSummary } from './types';
 
 function localDate(iso: string): string {
@@ -41,7 +42,9 @@ export function Sidebar({
   onNew,
   onResetDemo,
   onLoadDemo,
-  providers,
+  seeding,
+  open,
+  onClose,
 }: {
   threads: ThreadSummary[];
   activeId: string | null;
@@ -49,73 +52,63 @@ export function Sidebar({
   onNew: () => void;
   onResetDemo: () => void;
   onLoadDemo: () => void;
-  providers: Array<{ name: string; configured: boolean; role: string }>;
+  seeding: string | null;
+  open: boolean;
+  onClose: () => void;
 }) {
   const groups = groupThreads(threads);
   const hasDemo = threads.some((t) => t.isDemo);
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-head">
-        <div className="brand">
-          <span className="brand-mark">R</span>
-          Recall
-        </div>
-      </div>
-
-      <button className="new-chat" onClick={onNew} type="button">
-        <span aria-hidden style={{ fontSize: 15, lineHeight: 1 }}>
-          +
-        </span>
-        New chat
-      </button>
-
-      <div className="thread-list">
-        {groups.length === 0 ? (
-          <div className="thread-empty">Your conversations will appear here, with their dates. That is what makes “what did I ask last Tuesday?” answerable.</div>
-        ) : (
-          groups.map((group) => (
-            <div key={group.label}>
-              <div className="thread-group-label">{group.label}</div>
-              {group.items.map((thread) => (
-                <button
-                  key={thread.id}
-                  className="thread-item"
-                  data-active={thread.id === activeId}
-                  onClick={() => onSelect(thread.id)}
-                  type="button"
-                  title={thread.title}
-                >
-                  {thread.title}
-                </button>
-              ))}
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="sidebar-foot">
-        <div className="provider-row">
-          {providers.map((p) => (
-            <span className="provider" key={p.name} title={p.role}>
-              <span className="dot" data-on={p.configured} />
-              {p.name}
-            </span>
-          ))}
-        </div>
-        {hasDemo ? (
-          <button className="link-button" onClick={onResetDemo} type="button">
-            Reset demo history
+    <>
+      {open ? <div className="scrim" onClick={onClose} aria-hidden /> : null}
+      <aside className="sidebar" data-open={open}>
+        <div className="sidebar-head">
+          <div className="brand">
+            <span className="brand-mark">R</span>
+            Recall
+          </div>
+          <button className="icon-button" onClick={onNew} type="button" aria-label="New chat" title="New chat">
+            <PlusIcon />
           </button>
-        ) : (
-          <span>
-            <button className="link-button" onClick={onLoadDemo} type="button">
-              Load demo history
-            </button>{' '}
-            · nothing leaves this machine
-          </span>
-        )}
-      </div>
-    </aside>
+        </div>
+
+        <div className="thread-list">
+          {groups.length === 0 ? (
+            <div className="thread-empty">No chats yet.</div>
+          ) : (
+            groups.map((group) => (
+              <div key={group.label}>
+                <div className="thread-group-label">{group.label}</div>
+                {group.items.map((thread) => (
+                  <button
+                    key={thread.id}
+                    className="thread-item"
+                    data-active={thread.id === activeId}
+                    onClick={() => onSelect(thread.id)}
+                    type="button"
+                    title={thread.title}
+                  >
+                    {thread.title}
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="sidebar-foot">
+          {hasDemo ? (
+            <button className="foot-button" onClick={onResetDemo} type="button">
+              Remove sample chats
+            </button>
+          ) : (
+            <button className="foot-button" onClick={onLoadDemo} disabled={Boolean(seeding)} type="button">
+              {seeding ?? 'Add sample chats'}
+            </button>
+          )}
+        </div>
+      </aside>
+    </>
   );
 }
