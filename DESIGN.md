@@ -4,7 +4,7 @@
 
 The brief says “one tool: web search”, then gives three sample questions. Two of them — *“what did I ask you on 3 November?”* and *“last Tuesday I asked about Postgres, did pricing change?”* — are not search questions. They are **memory and time** questions. A chatbot with a search tool can answer neither, and most submissions will build exactly that.
 
-Recall is a web-research agent with a memory indexed by the user’s local calendar, and a ledger of the facts it has claimed, so a past answer can be **re-verified per fact** instead of re-researched.
+Omoide (思い出 — “memories”) is a web-research agent with a memory indexed by the user’s local calendar, and a ledger of the facts it has claimed, so a past answer can be **re-verified per fact** instead of re-researched.
 
 ```
 message

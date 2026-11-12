@@ -4,7 +4,7 @@
  * The same DDL runs on embedded PGlite and on a real Postgres.
  */
 export const SCHEMA_SQL = `
--- Recall schema. Plain SQL on purpose: it is the same file against PGlite and a
+-- Omoide schema. Plain SQL on purpose: it is the same file against PGlite and a
 -- real Postgres, and a reviewer can read the whole data model in one screen.
 
 CREATE TABLE IF NOT EXISTS users (

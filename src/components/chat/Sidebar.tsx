@@ -65,8 +65,8 @@ export function Sidebar({
       <aside className="sidebar" data-open={open}>
         <div className="sidebar-head">
           <div className="brand">
-            <span className="brand-mark">R</span>
-            Recall
+            <span className="brand-mark">想</span>
+            Omoide
           </div>
           <button className="icon-button" onClick={onNew} type="button" aria-label="New chat" title="New chat">
             <PlusIcon />

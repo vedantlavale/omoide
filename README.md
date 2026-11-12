@@ -1,6 +1,6 @@
-# Recall
+# Omoide
 
-A chat agent with one tool — web search — and a memory that is indexed by the day you said things, so “what did I ask you on 3 November?” and “has that price changed?” are answerable rather than improvised.
+**Omoide** (思い出, “memories”) — a chat agent with one tool — web search — and a memory that is indexed by the day you said things, so “what did I ask you on 3 November?” and “has that price changed?” are answerable rather than improvised.
 
 ```
 npm install

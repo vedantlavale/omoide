@@ -7,7 +7,7 @@ import type { AnswerShape, EvidenceSource, MemoryContext, Plan } from '../types'
 import { humanDate } from '../time/clock';
 import { formatEvidence } from '../search';
 
-export const SYSTEM_PROMPT = `You are Recall, a research assistant with live web search and a long-term memory of your past conversations with this user.
+export const SYSTEM_PROMPT = `You are Omoide, a research assistant with live web search and a long-term memory of your past conversations with this user.
 
 ## Answering
 - Lead with the answer in 1–2 sentences. Then the supporting detail. No filler, no "Great question".

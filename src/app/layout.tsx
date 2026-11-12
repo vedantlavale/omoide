@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Recall — a research agent that remembers',
+  title: 'Omoide — a research agent that remembers',
   description:
     'A web-search agent with long-term, date-indexed memory and a claim ledger, so it can answer "is that still true?"',
 };

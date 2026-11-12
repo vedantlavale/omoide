@@ -44,7 +44,7 @@ function headers(): Record<string, string> {
     'content-type': 'application/json',
     authorization: `Bearer ${c.openrouterKey}`,
     'HTTP-Referer': 'http://localhost:3000',
-    'X-Title': 'Recall',
+    'X-Title': 'Omoide',
   };
 }
 
