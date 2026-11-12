@@ -37,7 +37,7 @@ Everything before the final model call is deterministic and logged in a per-turn
 - **Model-native web search** — least code, but no control over ranking, caching, date filters, or storing validators, and the claim ledger needs to own the fetch.
 - **Vector-only memory** — dates aren’t semantic. Date index and full-text first, embeddings as a boost for paraphrases (“database hosting” ↔ “Postgres providers”).
 - **Storing only transcripts** — re-checks would mean re-reading and re-researching whole answers. The ledger makes them per-fact and usually free.
-- **Auto-seeding demo memories** — a reviewer would see conversations they never had and reasonably call it hallucination. Seeding is opt-in, in-process (PGlite is single-process), and labelled.
+- **Auto-seeding demo memories** — a reviewer would see conversations they never had and reasonably call it hallucination. Seeding is opt-in, in-process (PGlite is single-process), labelled, and idempotent: reseeding wipes the previous demo history instead of duplicating it.
 - **Agent frameworks (LangGraph/Mastra)** — they would hide the part being judged. The OpenAI-compatible streaming client is ~200 lines and shows every token and tool call.
 - **pgvector** — at personal scale, exact cosine over a few thousand turns is milliseconds and removes an extension from the zero-setup path; the schema is Postgres, so HNSW is a small migration away.
 
