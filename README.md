@@ -141,7 +141,7 @@ So the design centres on four things:
 
 1. **Dates are computed in code, never by the model.** The planner returns phrases (“last tuesday”); `src/server/time/resolve.ts` turns them into local dates with unit tests. Every message stores `local_date` in the user’s timezone, so “3 November” is an indexed equality lookup.
 2. **Memory is injected context, not a second tool.** The brief says one tool; giving the model `recall_memory` would also add a round trip and a failure mode. The orchestrator decides what the model needs to know before it speaks.
-3. **A claim ledger.** After each cited answer, atomic facts (entity, attribute, value, source URL, observed time) are extracted and stored. “Is that still correct?” becomes: conditional-fetch the source (ETag / Last-Modified / content hash); if unchanged, the answer is unchanged with **zero model tokens**; if changed, ask a small model which claims moved.
+3. **A claim ledger.** After each cited answer, atomic facts (entity, attribute, value, source URL, event time, observed time) are extracted and stored. “Is that still correct?” becomes: conditional-fetch the source (ETag / Last-Modified / content hash); if unchanged, the answer is unchanged with **zero model tokens**; if changed, ask a small model which claims moved. Event time (the page's publish date) is kept apart from observed time, so a fact learned today from an old article doesn't pretend to be current.
 4. **Honest misses.** Empty memory produces one plain sentence (“I don’t have a record of that”) plus something useful — never an invented past conversation. You can load opt-in demo history to see recall working.
 
 ## Architecture

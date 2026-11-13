@@ -69,6 +69,10 @@ CREATE TABLE IF NOT EXISTS claims (
   quote       text NOT NULL,
   source_url  text,
   observed_at timestamptz NOT NULL DEFAULT now(),
+  -- Event time: when the fact became true in the world (the source page's
+  -- publish date, or what the page itself states). Distinct from observed_at,
+  -- which is when WE learned it — old news must not look like current reality.
+  event_at    text,
   local_date  text NOT NULL,
   embedding   jsonb,
   is_demo     boolean NOT NULL DEFAULT false,
@@ -109,6 +113,10 @@ CREATE INDEX IF NOT EXISTS messages_tsv_idx ON messages USING GIN (tsv);
 CREATE INDEX IF NOT EXISTS claims_user_entity_idx ON claims (user_id, entity);
 CREATE INDEX IF NOT EXISTS claims_message_idx ON claims (message_id);
 CREATE INDEX IF NOT EXISTS claims_tsv_idx ON claims USING GIN (tsv);
+-- Migration for databases created before event_at existed (both PGlite and
+-- hosted Neon run this file on every connect; IF NOT EXISTS makes it a no-op
+-- on fresh schemas).
+ALTER TABLE claims ADD COLUMN IF NOT EXISTS event_at text;
 CREATE INDEX IF NOT EXISTS threads_user_idx ON threads (user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS traces_message_idx ON traces (message_id);
 CREATE INDEX IF NOT EXISTS search_cache_expiry_idx ON search_cache (expires_at);

@@ -229,6 +229,7 @@ async function seedClaimTurn(scenario: Scenario, seed: NonNullable<Scenario['see
       quote: seed.assistantText.slice(0, 160),
       sourceUrl: c.sourceUrl,
       observedAt: `${seed.localDate}T09:00:02.000Z`,
+      eventAt: null,
       localDate: seed.localDate,
     })),
     { messageId: assistantId, threadId: thread.id, localDate: seed.localDate, isDemo: true },

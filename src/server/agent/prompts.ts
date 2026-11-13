@@ -102,9 +102,10 @@ export function memoryBlock(memory: MemoryContext, nearest: Array<{ date: string
     lines.push(`    <assistant>${clip(match.assistantText, 1400)}</assistant>`);
     if (match.claims.length) {
       lines.push('    <claims>');
+      lines.push('      <!-- entity+attribute+value: a fact from that answer · event: when the fact became true (may be older than the conversation) · source: the cited page -->');
       for (const c of match.claims.slice(0, 20)) {
         lines.push(
-          `      <claim entity="${escapeAttr(c.entity)}" attribute="${escapeAttr(c.attribute)}" value="${escapeAttr(c.value)}"${c.unit ? ` unit="${escapeAttr(c.unit)}"` : ''}${c.sourceUrl ? ` source="${escapeAttr(c.sourceUrl)}"` : ''} />`,
+          `      <claim entity="${escapeAttr(c.entity)}" attribute="${escapeAttr(c.attribute)}" value="${escapeAttr(c.value)}"${c.unit ? ` unit="${escapeAttr(c.unit)}"` : ''}${c.eventAt ? ` event="${escapeAttr(c.eventAt)}"` : ''}${c.sourceUrl ? ` source="${escapeAttr(c.sourceUrl)}"` : ''} />`,
         );
       }
       lines.push('    </claims>');

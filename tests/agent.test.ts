@@ -67,6 +67,7 @@ describe('re-check heuristic', () => {
     quote: 'Launch — $19/month',
     sourceUrl: 'https://neon.com/pricing',
     observedAt: new Date().toISOString(),
+    eventAt: null,
     localDate: '2026-11-03',
   };
 

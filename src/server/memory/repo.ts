@@ -297,8 +297,8 @@ export async function insertClaims(claims: StoredClaim[], meta: { userId?: strin
   const db = await getDb();
   for (const c of claims) {
     await db.query(
-      `INSERT INTO claims (id, user_id, message_id, thread_id, entity, attribute, value, unit, qualifier, quote, source_url, observed_at, local_date, is_demo)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `INSERT INTO claims (id, user_id, message_id, thread_id, entity, attribute, value, unit, qualifier, quote, source_url, observed_at, event_at, local_date, is_demo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        ON CONFLICT (id) DO NOTHING`,
       [
         c.id,
@@ -313,6 +313,7 @@ export async function insertClaims(claims: StoredClaim[], meta: { userId?: strin
         c.quote,
         c.sourceUrl,
         c.observedAt,
+        c.eventAt,
         meta.localDate,
         meta.isDemo ?? false,
       ],
@@ -324,7 +325,7 @@ export async function claimsForMessages(messageIds: string[]): Promise<StoredCla
   if (!messageIds.length) return [];
   const db = await getDb();
   const rows = await db.query<Record<string, unknown>>(
-    `SELECT id, entity, attribute, value, unit, qualifier, quote, source_url, observed_at, local_date
+    `SELECT id, entity, attribute, value, unit, qualifier, quote, source_url, observed_at, event_at, local_date
      FROM claims WHERE message_id IN (${placeholders(messageIds.length)})`,
     messageIds,
   );
@@ -338,6 +339,7 @@ export async function claimsForMessages(messageIds: string[]): Promise<StoredCla
     quote: String(r.quote),
     sourceUrl: (r.source_url as string) ?? null,
     observedAt: String(r.observed_at),
+    eventAt: (r.event_at as string) ?? null,
     localDate: String(r.local_date),
   }));
 }

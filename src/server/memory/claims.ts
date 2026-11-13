@@ -23,6 +23,7 @@ const ClaimObject = z.object({
   qualifier: z.string().nullable().optional(),
   sourceId: z.string().nullable().optional(),
   quote: z.string().min(1),
+  eventAt: z.string().nullable().optional(),
 });
 
 const ClaimList = z.object({ claims: z.array(ClaimObject).max(25) });
@@ -35,6 +36,7 @@ export interface RawClaim {
   qualifier: string | null;
   sourceId: string | null;
   quote: string;
+  eventAt: string | null;
 }
 
 const SYSTEM = `You extract checkable facts from an answer so they can be re-verified later.
@@ -47,9 +49,10 @@ Rules:
 - value is the bare value exactly as written ("$19", "16.0", "0.5 GB").
 - quote must be copied verbatim from the passage that supports it (max 200 chars).
 - sourceId must be one of the provided source ids, or null when unclear.
+- eventAt: when THIS fact became true, if the evidence states it — prefer a date the passage itself gives ("effective December 2024", "announced Jan 6"); otherwise the source's published date. Use YYYY-MM-DD when possible, null when unknown. Old news must not look current, so never fill this with today's date.
 - Do not infer, compare, or compute. If the answer has no checkable facts, return {"claims":[]}.
 
-Return JSON: {"claims":[{"entity","attribute","value","unit","qualifier","sourceId","quote"}]}`;
+Return JSON: {"claims":[{"entity","attribute","value","unit","qualifier","sourceId","quote","eventAt"}]}`;
 
 /** Used both when the model is unavailable and as a deterministic eval path. */
 export function heuristicClaims(answer: string, sources: EvidenceSource[], entities: string[]): RawClaim[] {
@@ -77,6 +80,7 @@ export function heuristicClaims(answer: string, sources: EvidenceSource[], entit
         qualifier: /plan|tier/i.test(line) ? firstSentence(line, 120) : null,
         sourceId: source?.id ?? null,
         quote: line.slice(0, 200),
+        eventAt: source?.publishedAt ?? null,
       });
     }
   }
@@ -119,6 +123,7 @@ export async function extractClaims(input: {
       qualifier: c.qualifier ?? null,
       sourceId: c.sourceId ?? null,
       quote: c.quote.slice(0, 300),
+      eventAt: c.eventAt?.trim() || null,
     }));
   } catch {
     return heuristicClaims(input.answer, input.sources, input.entities);
@@ -147,6 +152,9 @@ export function toStored(
     quote: c.quote,
     sourceUrl: c.sourceId ? (byId.get(c.sourceId)?.url ?? null) : (input.sources[0]?.url ?? null),
     observedAt: input.now.toISOString(),
+    // Event time: what the extractor read off the page, else the source's own
+    // publish date. This is "when the fact became true", not "when we learned it".
+    eventAt: c.eventAt?.trim() || (c.sourceId ? byId.get(c.sourceId)?.publishedAt : input.sources[0]?.publishedAt) || null,
     localDate: input.localDate,
   }));
 }

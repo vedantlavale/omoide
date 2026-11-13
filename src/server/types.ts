@@ -81,7 +81,10 @@ export interface StoredClaim {
   qualifier: string | null;
   quote: string;
   sourceUrl: string | null;
+  /** When we learned the fact (ISO timestamp of the turn that cited it). */
   observedAt: string;
+  /** When the fact became true in the world: the source page's publish date or a date the page itself states. Null when unknown. */
+  eventAt: string | null;
   localDate: string;
 }
 

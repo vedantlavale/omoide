@@ -79,7 +79,7 @@ async function claimsWithMessageIds(messageIds: string[]): Promise<Map<string, S
   const db = await getDb();
   const ph = messageIds.map((_, i) => `$${i + 1}`).join(', ');
   const rows = await db.query<Record<string, unknown>>(
-    `SELECT id, message_id, entity, attribute, value, unit, qualifier, quote, source_url, observed_at, local_date
+    `SELECT id, message_id, entity, attribute, value, unit, qualifier, quote, source_url, observed_at, event_at, local_date
      FROM claims WHERE message_id IN (${ph})`,
     messageIds,
   );
@@ -94,6 +94,7 @@ async function claimsWithMessageIds(messageIds: string[]): Promise<Map<string, S
       quote: String(r.quote),
       sourceUrl: (r.source_url as string) ?? null,
       observedAt: String(r.observed_at),
+      eventAt: (r.event_at as string) ?? null,
       localDate: String(r.local_date),
     };
     const list = out.get(String(r.message_id)) ?? [];
