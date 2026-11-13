@@ -357,7 +357,16 @@ async function runScenario(scenario: Scenario): Promise<Result> {
 async function main() {
   const dir = path.join(process.cwd(), 'evals', 'scenarios');
   const files = readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
-  const scenarios: Scenario[] = files.map((f) => JSON.parse(readFileSync(path.join(dir, f), 'utf8')));
+  // EVAL_ONLY=<scenario id> reruns a single scenario — cheap re-tests after a
+  // transient live failure, without re-billing the other eleven.
+  const only = process.env.EVAL_ONLY;
+  const scenarios: Scenario[] = files
+    .map((f) => JSON.parse(readFileSync(path.join(dir, f), 'utf8')))
+    .filter((s: Scenario) => !only || s.id === only);
+  if (only && scenarios.length === 0) {
+    console.error(`EVAL_ONLY="${only}" matches no scenario in evals/scenarios/`);
+    process.exit(2);
+  }
 
   const results: Result[] = [];
   for (const scenario of scenarios) {
