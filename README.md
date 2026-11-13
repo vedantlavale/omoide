@@ -144,6 +144,18 @@ So the design centres on four things:
 3. **A claim ledger.** After each cited answer, atomic facts (entity, attribute, value, source URL, event time, observed time) are extracted and stored. “Is that still correct?” becomes: conditional-fetch the source (ETag / Last-Modified / content hash); if unchanged, the answer is unchanged with **zero model tokens**; if changed, ask a small model which claims moved. Event time (the page's publish date) is kept apart from observed time, so a fact learned today from an old article doesn't pretend to be current.
 4. **Honest misses.** Empty memory produces one plain sentence (“I don’t have a record of that”) plus something useful — never an invented past conversation. You can load opt-in demo history to see recall working.
 
+### Three clocks per fact
+
+Most systems only know when data was *stored* — so newly imported old news looks like current reality. Omoide keeps the times separate, on purpose:
+
+| Clock | Column | Answers |
+|---|---|---|
+| **Event time** | `claims.event_at` | When the fact *became true* — the source page's publish date, or a date the page itself states ("effective December 2024"). The extractor is explicitly told never to fill this with today's date. |
+| **Observed time** | `claims.observed_at` | When *we* learned the fact (the turn that cited it). |
+| **Verification time** | `claim_checks.checked_at` | Every re-check appended, with its verdict and the new value. |
+
+A claim learned today from an article published in January is therefore labelled as such when its memory is injected, and the model can say *"that was reported in a Jan 2025 page"* instead of implying it is current. There are no `valid_from`/`valid_until` columns: the sequence of `claim_checks` rows *is* the interval history, reconstructible with plain SQL — and staleness is caught by *testing* a fact against the live page (ETag `304` / content hash / page diff), not by replaying stored intervals. Same idea as temporal knowledge graphs, implemented as an auditable flat ledger.
+
 ## Architecture
 
 ```
@@ -233,6 +245,7 @@ The only *code* difference between local and deployed is `DATABASE_URL`. Same ap
 
 - `src/server/agent/orchestrator.ts` — the only file that knows a whole turn; ordering matters more than any prompt.
 - `src/server/time/resolve.ts` + `tests/time.test.ts` — the date contract; “last Tuesday” on Tuesday 10 Nov is 3 Nov, and that is tested.
+- `src/server/memory/claims.ts` — claim extraction, including the event-time prompt rule and the `event_at`/`observed_at` separation.
 - `src/server/memory/recheck.ts` — the cheap path: 304/hash short-circuit, then model verification only when the page really changed.
 - `src/server/search/index.ts` — the one tool, including the citation registry and why ids are stable per turn.
 - `src/server/agent/synthesize.ts` — one model call in the common case, at most two self-chosen follow-up searches.
